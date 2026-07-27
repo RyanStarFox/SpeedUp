@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SpeedUp — Bilibili & YouTube
 // @namespace    https://github.com/RyanStarFox/SpeedUp
-// @version      1.2.0
+// @version      1.3.0
 // @description  Richer playback speeds with native-bar UX, memory, and hold O/P
 // @author       SpeedUp
 // @match        https://www.youtube.com/*
@@ -12,7 +12,7 @@
 // @match        https://www.bilibili.com/festival/*
 // @match        https://bilibili.com/video/*
 // @grant        none
-// @run-at       document-start
+// @run-at       document-idle
 // @noframes
 // ==/UserScript==
 
@@ -141,81 +141,22 @@
   };
 
   // ─────────────────────────────────────────────────────────────
-  // Rate lock on the page prototype
+  // Write only to media elements we can see. Do not alter browser-wide
+  // prototypes: Bilibili's application code relies on those descriptors.
   // ─────────────────────────────────────────────────────────────
-  const RateLock = (() => {
+  const RateWriter = (() => {
     let desired = 1;
-    let fromUs = false;
-    let patched = false;
-    let nativeGet = null;
-    let nativeSet = null;
-
-    function patch() {
-      if (patched) return patched;
-      try {
-        const proto = win.HTMLMediaElement && win.HTMLMediaElement.prototype;
-        if (!proto) return false;
-        const desc = Object.getOwnPropertyDescriptor(proto, 'playbackRate');
-        if (!desc || !desc.get || !desc.set) return false;
-        nativeGet = desc.get;
-        nativeSet = desc.set;
-        Object.defineProperty(proto, 'playbackRate', {
-          configurable: true,
-          enumerable: desc.enumerable,
-          get() {
-            return nativeGet.call(this);
-          },
-          set(v) {
-            if (fromUs) {
-              nativeSet.call(this, v);
-              return;
-            }
-            // Bilibili often forces 1× (login wall / feature flags)
-            if (Number(v) === 1 && desired !== 1) {
-              nativeSet.call(this, desired);
-              return;
-            }
-            nativeSet.call(this, v);
-          },
-        });
-        patched = true;
-        log('playbackRate patched on page prototype');
-        return true;
-      } catch (e) {
-        console.warn('[SpeedUp] failed to patch playbackRate', e);
-        return false;
-      }
-    }
-
-    function read(el) {
-      try {
-        return nativeGet ? nativeGet.call(el) : el.playbackRate;
-      } catch (_) {
-        return el.playbackRate;
-      }
-    }
-
-    function write(el, rate) {
-      fromUs = true;
-      try {
-        if (nativeSet) nativeSet.call(el, rate);
-        else el.playbackRate = rate;
-      } finally {
-        fromUs = false;
-      }
-    }
 
     function setDesired(rate) {
       desired = rate;
     }
 
     function applyAll(rate) {
-      patch();
       desired = rate;
-      const list = document.querySelectorAll('video, audio');
+      const list = document.querySelectorAll('video');
       for (const el of list) {
         try {
-          write(el, rate);
+          el.playbackRate = rate;
         } catch (_) {
           /* ignore */
         }
@@ -223,18 +164,19 @@
     }
 
     function enforce() {
-      if (!patched && !patch()) return;
-      const list = document.querySelectorAll('video, audio');
+      const list = document.querySelectorAll('video');
       for (const el of list) {
         try {
-          if (Math.abs(read(el) - desired) > 0.05) write(el, desired);
+          if (Math.abs(el.playbackRate - desired) > 0.05) {
+            el.playbackRate = desired;
+          }
         } catch (_) {
           /* ignore */
         }
       }
     }
 
-    return { patch, applyAll, enforce, setDesired, getDesired: () => desired };
+    return { applyAll, enforce, setDesired, getDesired: () => desired };
   })();
 
   // ─────────────────────────────────────────────────────────────
@@ -566,7 +508,7 @@
     }
 
     applyRate(rate) {
-      RateLock.applyAll(rate);
+      RateWriter.applyAll(rate);
       if (this._labelEl) this._labelEl.textContent = formatRate(rate);
     }
   }
@@ -737,7 +679,7 @@
     }
 
     applyRate(rate) {
-      RateLock.applyAll(rate);
+      RateWriter.applyAll(rate);
       if (this._labelEl) this._labelEl.textContent = formatRate(rate);
     }
   }
@@ -753,10 +695,8 @@
       return;
     }
 
-    RateLock.patch();
-
     const controller = new SpeedController(siteId);
-    RateLock.setDesired(controller.getEffectiveRate());
+    RateWriter.setDesired(controller.getEffectiveRate());
 
     const adapter =
       siteId === 'youtube' ? new YouTubeAdapter(controller) : new BilibiliAdapter(controller);
@@ -770,7 +710,7 @@
       adapter.start();
       adapter.applyRate(controller.getEffectiveRate());
       console.info(
-        `[SpeedUp] v1.2.0 active on ${siteId} — base ${formatRate(controller.getBaseRate())}. Hold O/P 0.5s to temp slow/boost.`
+        `[SpeedUp] v1.3.0 active on ${siteId} — base ${formatRate(controller.getBaseRate())}. Hold O/P 0.5s to temp slow/boost.`
       );
     };
 
@@ -781,7 +721,7 @@
     }
 
     // Keep rate stuck even if the site fights back
-    setInterval(() => RateLock.enforce(), 500);
+    setInterval(() => RateWriter.enforce(), 500);
   }
 
   boot();
