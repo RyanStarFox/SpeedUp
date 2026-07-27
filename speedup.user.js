@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SpeedUp — Bilibili & YouTube
 // @namespace    https://github.com/RyanStarFox/SpeedUp
-// @version      1.7.0
+// @version      1.7.1
 // @description  Richer playback speeds with native-bar UX, memory, and hold O/P
 // @author       SpeedUp
 // @match        https://www.youtube.com/*
@@ -556,7 +556,10 @@
         const style = document.createElement('style');
         style.id = 'speedup-yt-style';
         style.textContent = `
-          .speedup-yt-wrap { position: relative; display: inline-block; vertical-align: top; }
+          .speedup-yt-wrap {
+            position: relative; display: inline-block; vertical-align: top;
+            top: -6px;
+          }
           .speedup-yt-btn { min-width: 48px !important; position: relative !important; }
           .speedup-yt-label {
             font-size: 14px; font-weight: 500; display: flex; align-items: center;
