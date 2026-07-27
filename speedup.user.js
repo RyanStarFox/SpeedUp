@@ -261,29 +261,11 @@
     }
 
     bindKeys() {
-      const playerSelector = '#movie_player, .bpx-player, .bilibili-player';
-      this._playerFocused = false;
-      document.addEventListener(
-        'pointerdown',
-        (event) => {
-          const player = event.target.closest?.(playerSelector);
-          const video = event.target.matches?.('video') ? event.target : player?.querySelector('video');
-          this._playerFocused = Boolean(player || event.target.matches?.('video'));
-          if (video) {
-            video.tabIndex = 0;
-            video.focus({ preventScroll: true });
-          }
-        },
-        true
-      );
-      const isPlayerFocusedAndPlaying = () => {
-        const active = document.activeElement;
-        const activePlayer = active?.matches('video') ? null : active?.closest?.(playerSelector);
+      const isVideoPlaying = () => {
         const video =
-          active?.matches('video')
-            ? active
-            : activePlayer?.querySelector('video') || document.querySelector('video');
-        return Boolean(this._playerFocused && video && !video.paused && !video.ended);
+          document.querySelector('#movie_player video, .bpx-player video, .bilibili-player video') ||
+          document.querySelector('video');
+        return Boolean(video && !video.paused && !video.ended);
       };
       const clearSpeedRepeat = () => {
         if (this._speedHoldTimer) clearTimeout(this._speedHoldTimer);
@@ -309,7 +291,7 @@
         // Prefer physical key codes so layout / IME noise matters less
         const code = e.code;
         const step = { Comma: -0.1, Period: 0.1, Semicolon: -0.5, Quote: 0.5 }[code];
-        if (step && isPlayerFocusedAndPlaying()) {
+        if (step && isVideoPlaying()) {
           e.preventDefault();
           e.stopPropagation();
           this.setBaseRate(roundRate(this.baseRate + step));
@@ -331,7 +313,7 @@
         if (code === 'KeyP') kind = 'p';
         if (code === 'KeyO') kind = 'o';
         if (!kind) return;
-        if (!isPlayerFocusedAndPlaying()) return;
+        if (!isVideoPlaying()) return;
         if (this._holdKey) return;
         e.preventDefault();
         e.stopPropagation();
