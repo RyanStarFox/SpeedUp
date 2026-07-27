@@ -16,8 +16,8 @@ assert.match(script, /localStorage\.getItem/, 'must use page-native storage with
 assert.match(script, /localStorage\.setItem/, 'must persist the selected rate with page-native storage');
 assert.match(
   script,
-  /_replaceNativeSpeedPanel/,
-  'must target YouTube’s native settings panel'
+  /speedup-yt-wrap/,
+  'must provide a standalone YouTube speed control'
 );
 assert.match(
   script,

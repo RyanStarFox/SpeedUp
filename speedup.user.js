@@ -445,10 +445,11 @@
             position: absolute; bottom: 52px; right: 0; background: rgba(28,28,28,.95);
             border-radius: 8px; padding: 6px 0; min-width: 128px; z-index: 10000;
             box-shadow: 0 4px 16px rgba(0,0,0,.45);
+            max-height: min(420px, 70vh); overflow-y: auto;
           }
           .speedup-yt-menu[hidden] { display: none !important; }
           .speedup-yt-item {
-            padding: 8px 16px; color: #fff; cursor: pointer; font-size: 13px;
+            padding: 9px 16px; color: #fff; cursor: pointer; font-size: 16px; text-align: center;
           }
           .speedup-yt-item:hover { background: rgba(255,255,255,.1); }
           .speedup-yt-item.speedup-active { background: rgba(255,255,255,.16); }
@@ -486,6 +487,8 @@
           activeClass: 'speedup-active',
           customClass: 'speedup-yt-custom',
           inputClass: 'speedup-yt-input',
+          reverse: true,
+          customFirst: true,
         });
       };
       rebuild();
@@ -515,43 +518,6 @@
       this._menu = menu;
       this._rebuild = rebuild;
       log('YouTube control mounted');
-    }
-
-    // This later declaration intentionally replaces the old control-bar
-    // implementation above. It only takes over YouTube's native speed panel.
-    start() {
-      const isSpeedRow = (row) => {
-        const text = (row?.innerText || '').replace(/\s/g, '');
-        return text.includes('播放速度') || text.includes('Playbackspeed');
-      };
-
-      document.addEventListener(
-        'click',
-        (event) => {
-          const row = event.target.closest?.('.ytp-panel-menu .ytp-menuitem');
-          if (!isSpeedRow(row)) return;
-          event.preventDefault();
-          event.stopImmediatePropagation();
-          this._replaceNativeSpeedPanel(true);
-        },
-        true
-      );
-      document.addEventListener('yt-navigate-finish', () => this.applyRate(this.controller.getEffectiveRate()));
-    }
-
-    _replaceNativeSpeedPanel(force = false) {
-      const menu = document.querySelector('.ytp-panel-menu');
-      if (!menu) return;
-      const rows = [...menu.querySelectorAll(':scope > .ytp-menuitem')];
-      if (!rows.length || (!force && rows.some((row) => /播放速度|Playback speed/i.test(row.innerText)))) return;
-
-      fillMenu(menu, this.controller, {
-        siteId: 'youtube',
-        itemClass: 'ytp-menuitem',
-        activeClass: 'ytp-menuitem-checked',
-        customClass: 'ytp-menuitem',
-        inputClass: 'speedup-yt-input',
-      });
     }
 
     applyRate(rate) {
