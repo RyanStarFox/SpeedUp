@@ -270,9 +270,11 @@
         },
         true
       );
-      const isPlayerFocused = () => {
+      const isPlayerFocusedAndPlaying = () => {
         const active = document.activeElement;
-        return Boolean(active?.matches('video') || active?.closest?.(playerSelector));
+        const player = active?.matches('video') ? null : active?.closest?.(playerSelector);
+        const video = active?.matches('video') ? active : player?.querySelector('video');
+        return Boolean(video && !video.paused && !video.ended);
       };
       const clearSpeedRepeat = () => {
         if (this._speedHoldTimer) clearTimeout(this._speedHoldTimer);
@@ -284,7 +286,7 @@
 
       const onKeyDown = (e) => {
         if (e.repeat) {
-          if (['KeyU', 'KeyI', 'KeyO', 'KeyP'].includes(e.code)) {
+          if (['Semicolon', 'Quote', 'KeyO', 'KeyP'].includes(e.code)) {
             e.preventDefault();
             e.stopPropagation();
           }
@@ -297,8 +299,8 @@
 
         // Prefer physical key codes so layout / IME noise matters less
         const code = e.code;
-        const step = { KeyU: -0.1, KeyI: 0.1, KeyO: -0.5, KeyP: 0.5 }[code];
-        if (step && isPlayerFocused()) {
+        const step = { Semicolon: -0.1, Quote: 0.1, KeyO: -0.5, KeyP: 0.5 }[code];
+        if (step && isPlayerFocusedAndPlaying()) {
           e.preventDefault();
           e.stopPropagation();
           this.setBaseRate(roundRate(this.baseRate + step));
@@ -317,10 +319,10 @@
           return;
         }
         let kind = null;
-        if (code === 'Equal') kind = 'p';
-        if (code === 'Minus') kind = 'o';
+        if (code === 'Period') kind = 'p';
+        if (code === 'Comma') kind = 'o';
         if (!kind) return;
-        if (!isPlayerFocused()) return;
+        if (!isPlayerFocusedAndPlaying()) return;
         if (this._holdKey) return;
 
         this._holdKey = kind;
@@ -352,13 +354,13 @@
 
       const onKeyUp = (e) => {
         const code = e.code;
-        if (['KeyU', 'KeyI', 'KeyO', 'KeyP'].includes(code)) {
+        if (['Semicolon', 'Quote', 'KeyO', 'KeyP'].includes(code)) {
           clearSpeedRepeat();
           return;
         }
         const isHoldKey =
-          code === 'Minus' ||
-          code === 'Equal';
+          code === 'Comma' ||
+          code === 'Period';
         if (isHoldKey && this._holdKey) clearHold('keyup');
       };
 
