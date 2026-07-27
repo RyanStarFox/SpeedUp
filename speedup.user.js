@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SpeedUp — Bilibili & YouTube
 // @namespace    https://github.com/RyanStarFox/SpeedUp
-// @version      1.4.1
+// @version      1.5.0
 // @description  Richer playback speeds with native-bar UX, memory, and hold O/P
 // @author       SpeedUp
 // @match        https://www.youtube.com/*
@@ -504,6 +504,42 @@
       this._menu = menu;
       this._rebuild = rebuild;
       log('YouTube control mounted');
+    }
+
+    // This later declaration intentionally replaces the old control-bar
+    // implementation above. It only takes over YouTube's native speed panel.
+    start() {
+      const isSpeedRow = (row) => {
+        const text = (row?.innerText || '').replace(/\s/g, '');
+        return text.includes('播放速度') || text.includes('Playbackspeed');
+      };
+
+      document.addEventListener(
+        'click',
+        (event) => {
+          const row = event.target.closest?.('.ytp-panel-menu .ytp-menuitem');
+          if (!isSpeedRow(row)) return;
+          // YouTube swaps the panel asynchronously after this native click.
+          [80, 220].forEach((delay) => setTimeout(() => this._replaceNativeSpeedPanel(), delay));
+        },
+        true
+      );
+      document.addEventListener('yt-navigate-finish', () => this.applyRate(this.controller.getEffectiveRate()));
+    }
+
+    _replaceNativeSpeedPanel() {
+      const menu = document.querySelector('.ytp-panel-menu');
+      if (!menu) return;
+      const rows = [...menu.querySelectorAll(':scope > .ytp-menuitem')];
+      if (!rows.length || rows.some((row) => /播放速度|Playback speed/i.test(row.innerText))) return;
+
+      fillMenu(menu, this.controller, {
+        siteId: 'youtube',
+        itemClass: 'ytp-menuitem',
+        activeClass: 'ytp-menuitem-checked',
+        customClass: 'ytp-menuitem',
+        inputClass: 'speedup-yt-input',
+      });
     }
 
     applyRate(rate) {

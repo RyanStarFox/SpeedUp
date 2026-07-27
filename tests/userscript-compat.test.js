@@ -14,15 +14,10 @@ assert.doesNotMatch(
 );
 assert.match(script, /localStorage\.getItem/, 'must use page-native storage without GM APIs');
 assert.match(script, /localStorage\.setItem/, 'must persist the selected rate with page-native storage');
-assert.doesNotMatch(
-  script,
-  /insertBefore\(wrap,\s*settingsBtn\)/,
-  'must not depend on YouTube settings-button placement'
-);
 assert.match(
   script,
-  /controls\.appendChild\(wrap\)/,
-  'must append the YouTube control directly to the stable controls container'
+  /_replaceNativeSpeedPanel/,
+  'must target YouTube’s native settings panel'
 );
 assert.doesNotMatch(
   script,
