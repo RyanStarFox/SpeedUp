@@ -267,6 +267,29 @@
           document.querySelector('video');
         return Boolean(video && !video.paused && !video.ended);
       };
+      const isTextEditing = (event) => {
+        if (
+          this._isEditableTarget(event.target) ||
+          this._isEditableTarget(document.activeElement)
+        ) {
+          return true;
+        }
+        return Boolean(
+          document.querySelector(
+            [
+              'input:focus',
+              'textarea:focus',
+              '[contenteditable]:focus',
+              '[contenteditable]:focus-within',
+              '.reply-box-textarea:focus-within',
+              '.reply-box:focus-within',
+              '.ql-editor:focus-within',
+              '.bpx-player-dm-input:focus-within',
+              'iframe:focus',
+            ].join(', ')
+          )
+        );
+      };
       const clearSpeedRepeat = () => {
         if (this._speedHoldTimer) clearTimeout(this._speedHoldTimer);
         if (this._speedRepeatTimer) clearTimeout(this._speedRepeatTimer);
@@ -284,7 +307,7 @@
           return;
         }
         if (e.ctrlKey || e.metaKey || e.altKey) return;
-        if (this._isEditableTarget(e.target) || this._isEditableTarget(document.activeElement)) {
+        if (isTextEditing(e)) {
           return;
         }
 
