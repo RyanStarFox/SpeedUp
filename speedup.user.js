@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SpeedUp — Bilibili & YouTube
 // @namespace    https://github.com/RyanStarFox/SpeedUp
-// @version      1.1.0
+// @version      1.2.0
 // @description  Richer playback speeds with native-bar UX, memory, and hold O/P
 // @author       SpeedUp
 // @match        https://www.youtube.com/*
@@ -11,9 +11,7 @@
 // @match        https://www.bilibili.com/bangumi/play/*
 // @match        https://www.bilibili.com/festival/*
 // @match        https://bilibili.com/video/*
-// @grant        GM_getValue
-// @grant        GM_setValue
-// @grant        unsafeWindow
+// @grant        none
 // @run-at       document-start
 // @noframes
 // ==/UserScript==
@@ -28,7 +26,8 @@
   // ─────────────────────────────────────────────────────────────
   const CONFIG = {
     // 'per-site' = separate remembered rates for YouTube / Bilibili (default)
-    // 'global'   = one shared rate across both sites — change this line to 'global'
+    // 'global'   = one key per site origin. Browsers do not allow localStorage
+    //              to be shared between youtube.com and bilibili.com.
     memoryMode: 'per-site',
 
     presets: [0.5, 1, 1.5, 2, 2.5, 3],
@@ -44,8 +43,9 @@
     if (CONFIG.debug) console.log('[SpeedUp]', ...args);
   };
 
-  // Page realm (critical when @grant GM_* puts us in a sandbox)
-  const win = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
+  // @grant none keeps the code in the page realm, which works in Safari,
+  // Tampermonkey, and the Userscripts Safari extension.
+  const win = window;
 
   try {
     if (document.documentElement?.hasAttribute('data-speedup')) return;
@@ -110,7 +110,7 @@
     },
     getRate(siteId) {
       try {
-        const v = GM_getValue(this._rateKey(siteId), 1);
+        const v = localStorage.getItem(`speedup:${this._rateKey(siteId)}`);
         return clampRate(Number(v) || 1);
       } catch (_) {
         return 1;
@@ -118,14 +118,14 @@
     },
     setRate(siteId, rate) {
       try {
-        GM_setValue(this._rateKey(siteId), clampRate(rate));
+        localStorage.setItem(`speedup:${this._rateKey(siteId)}`, String(clampRate(rate)));
       } catch (_) {
         /* ignore */
       }
     },
     getCustom(siteId) {
       try {
-        const v = GM_getValue(this._customKey(siteId), '');
+        const v = localStorage.getItem(`speedup:${this._customKey(siteId)}`);
         return v === '' || v == null ? '' : String(v);
       } catch (_) {
         return '';
@@ -133,7 +133,7 @@
     },
     setCustom(siteId, rate) {
       try {
-        GM_setValue(this._customKey(siteId), String(clampRate(rate)));
+        localStorage.setItem(`speedup:${this._customKey(siteId)}`, String(clampRate(rate)));
       } catch (_) {
         /* ignore */
       }
@@ -141,26 +141,7 @@
   };
 
   // ─────────────────────────────────────────────────────────────
-  // Force open shadow roots (Bilibili may hide <video> otherwise)
-  // ─────────────────────────────────────────────────────────────
-  (function forceOpenShadow() {
-    try {
-      const proto = win.Element && win.Element.prototype;
-      if (!proto || proto.__speedupShadowPatched) return;
-      const native = proto.attachShadow;
-      if (typeof native !== 'function') return;
-      proto.attachShadow = function (init) {
-        const next = Object.assign({}, init || {}, { mode: 'open' });
-        return native.call(this, next);
-      };
-      proto.__speedupShadowPatched = true;
-    } catch (e) {
-      log('attachShadow patch failed', e);
-    }
-  })();
-
-  // ─────────────────────────────────────────────────────────────
-  // Rate lock on the PAGE prototype (not the sandbox copy)
+  // Rate lock on the page prototype
   // ─────────────────────────────────────────────────────────────
   const RateLock = (() => {
     let desired = 1;
@@ -789,7 +770,7 @@
       adapter.start();
       adapter.applyRate(controller.getEffectiveRate());
       console.info(
-        `[SpeedUp] v1.1.0 active on ${siteId} — base ${formatRate(controller.getBaseRate())}. Hold O/P 0.5s to temp slow/boost.`
+        `[SpeedUp] v1.2.0 active on ${siteId} — base ${formatRate(controller.getBaseRate())}. Hold O/P 0.5s to temp slow/boost.`
       );
     };
 
