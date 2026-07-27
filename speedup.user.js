@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SpeedUp — Bilibili & YouTube
 // @namespace    https://github.com/RyanStarFox/SpeedUp
-// @version      1.3.0
+// @version      1.3.1
 // @description  Richer playback speeds with native-bar UX, memory, and hold O/P
 // @author       SpeedUp
 // @match        https://www.youtube.com/*
@@ -497,8 +497,13 @@
       wrap.appendChild(menu);
 
       const settingsBtn = controls.querySelector('.ytp-settings-button');
-      if (settingsBtn) controls.insertBefore(wrap, settingsBtn);
-      else controls.appendChild(wrap);
+      // YouTube nests the settings button inside another control wrapper.
+      // insertBefore requires the reference node to be a direct child.
+      if (settingsBtn?.parentElement) {
+        settingsBtn.parentElement.insertBefore(wrap, settingsBtn);
+      } else {
+        controls.appendChild(wrap);
+      }
 
       this._wrap = wrap;
       this._labelEl = label;
@@ -710,7 +715,7 @@
       adapter.start();
       adapter.applyRate(controller.getEffectiveRate());
       console.info(
-        `[SpeedUp] v1.3.0 active on ${siteId} — base ${formatRate(controller.getBaseRate())}. Hold O/P 0.5s to temp slow/boost.`
+        `[SpeedUp] v1.3.1 active on ${siteId} — base ${formatRate(controller.getBaseRate())}. Hold O/P 0.5s to temp slow/boost.`
       );
     };
 

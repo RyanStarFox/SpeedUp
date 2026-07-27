@@ -7,9 +7,9 @@
 1. Safari 可使用 [Userscripts](https://github.com/quoid/userscripts) 或 [Tampermonkey](https://www.tampermonkey.net/)；Chrome/Edge/Firefox 可使用 Tampermonkey
 2. **Chrome / Edge 138+**：扩展详情里打开 **允许运行用户脚本 / Allow User Scripts**（或开启开发者模式），否则脚本不会执行
 3. 打开管理面板 →「添加新脚本」
-4. 将仓库根目录的 [`speedup.user.js`](./speedup.user.js) 全文粘贴保存（已装过的请整份覆盖升级到 **v1.3.0+**）
+4. 将仓库根目录的 [`speedup.user.js`](./speedup.user.js) 全文粘贴保存（已装过的请整份覆盖升级到 **v1.3.1+**）
 5. 打开 B 站视频页或 YouTube 视频页，**硬刷新**（Cmd/Ctrl+Shift+R）
-6. 打开控制台应看到：`[SpeedUp] v1.3.0 active on ...`；播放器控制栏应出现倍速按钮（如 `1.0x`）
+6. 打开控制台应看到：`[SpeedUp] v1.3.1 active on ...`；播放器控制栏应出现倍速按钮（如 `1.0x`）
 
 ## 功能
 
@@ -35,7 +35,7 @@
 
 1. 确认 Tampermonkey 图标里本脚本为启用，且当前页匹配
 2. 确认已允许用户脚本（见上方安装第 2 步）
-3. 控制台有无 `[SpeedUp] v1.3.0 active`；没有 = 脚本未注入
+3. 控制台有无 `[SpeedUp] v1.3.1 active`；没有 = 脚本未注入
 4. 输入框聚焦时 O/P 会被忽略；需按住 **≥0.5 秒** 才会临时变速
 
 ## 修改记忆方式

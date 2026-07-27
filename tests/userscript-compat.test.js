@@ -14,5 +14,15 @@ assert.doesNotMatch(
 );
 assert.match(script, /localStorage\.getItem/, 'must use page-native storage without GM APIs');
 assert.match(script, /localStorage\.setItem/, 'must persist the selected rate with page-native storage');
+assert.doesNotMatch(
+  script,
+  /controls\.insertBefore\(wrap,\s*settingsBtn\)/,
+  'must not insert before a non-child YouTube settings button'
+);
+assert.match(
+  script,
+  /settingsBtn\.parentElement\.insertBefore\(wrap,\s*settingsBtn\)/,
+  'must insert beside the settings button through its real parent'
+);
 
 console.log('userscript compatibility: ok');
