@@ -16,13 +16,18 @@ assert.match(script, /localStorage\.getItem/, 'must use page-native storage with
 assert.match(script, /localStorage\.setItem/, 'must persist the selected rate with page-native storage');
 assert.doesNotMatch(
   script,
-  /controls\.insertBefore\(wrap,\s*settingsBtn\)/,
-  'must not insert before a non-child YouTube settings button'
+  /insertBefore\(wrap,\s*settingsBtn\)/,
+  'must not depend on YouTube settings-button placement'
 );
 assert.match(
   script,
-  /settingsBtn\.parentElement\.insertBefore\(wrap,\s*settingsBtn\)/,
-  'must insert beside the settings button through its real parent'
+  /controls\.appendChild\(wrap\)/,
+  'must append the YouTube control directly to the stable controls container'
+);
+assert.doesNotMatch(
+  script,
+  /new MutationObserver/,
+  'must not observe the entire page and repeatedly remount controls'
 );
 
 console.log('userscript compatibility: ok');

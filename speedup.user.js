@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SpeedUp — Bilibili & YouTube
 // @namespace    https://github.com/RyanStarFox/SpeedUp
-// @version      1.3.1
+// @version      1.4.0
 // @description  Richer playback speeds with native-bar UX, memory, and hold O/P
 // @author       SpeedUp
 // @match        https://www.youtube.com/*
@@ -410,10 +410,11 @@
         return true;
       };
 
-      const mo = new MutationObserver(() => tryMount());
-      mo.observe(document.documentElement, { childList: true, subtree: true });
+      const waitForControls = () => {
+        if (!tryMount()) setTimeout(waitForControls, 300);
+      };
       document.addEventListener('yt-navigate-finish', () => setTimeout(tryMount, 200));
-      tryMount();
+      waitForControls();
     }
 
     _inject(controls) {
@@ -496,14 +497,7 @@
       wrap.appendChild(btn);
       wrap.appendChild(menu);
 
-      const settingsBtn = controls.querySelector('.ytp-settings-button');
-      // YouTube nests the settings button inside another control wrapper.
-      // insertBefore requires the reference node to be a direct child.
-      if (settingsBtn?.parentElement) {
-        settingsBtn.parentElement.insertBefore(wrap, settingsBtn);
-      } else {
-        controls.appendChild(wrap);
-      }
+      controls.appendChild(wrap);
 
       this._wrap = wrap;
       this._labelEl = label;
@@ -534,9 +528,10 @@
         if (shouldSkipPage('bilibili')) return false;
         return this._ensureControl();
       };
-      const mo = new MutationObserver(() => tryMount());
-      mo.observe(document.documentElement, { childList: true, subtree: true });
-      tryMount();
+      const waitForControls = () => {
+        if (!tryMount()) setTimeout(waitForControls, 300);
+      };
+      waitForControls();
       // SPA href changes
       let href = location.href;
       setInterval(() => {
@@ -715,7 +710,7 @@
       adapter.start();
       adapter.applyRate(controller.getEffectiveRate());
       console.info(
-        `[SpeedUp] v1.3.1 active on ${siteId} — base ${formatRate(controller.getBaseRate())}. Hold O/P 0.5s to temp slow/boost.`
+        `[SpeedUp] v1.4.0 active on ${siteId} — base ${formatRate(controller.getBaseRate())}. Hold O/P 0.5s to temp slow/boost.`
       );
     };
 
@@ -726,7 +721,8 @@
     }
 
     // Keep rate stuck even if the site fights back
-    setInterval(() => RateWriter.enforce(), 500);
+    // Do not continuously rewrite video rates. Sites can safely keep their
+    // own lifecycle; the remembered rate is applied at startup and on change.
   }
 
   boot();
