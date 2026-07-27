@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SpeedUp — Bilibili & YouTube
 // @namespace    https://github.com/RyanStarFox/SpeedUp
-// @version      1.4.0
+// @version      1.4.1
 // @description  Richer playback speeds with native-bar UX, memory, and hold O/P
 // @author       SpeedUp
 // @match        https://www.youtube.com/*
@@ -321,11 +321,11 @@
   // Shared menu UI
   // ─────────────────────────────────────────────────────────────
   function fillMenu(menuEl, controller, opts) {
-    const { itemClass, activeClass, customClass, inputClass, siteId } = opts;
+    const { itemClass, activeClass, customClass, inputClass, itemTag = 'div', siteId } = opts;
     menuEl.textContent = '';
 
     for (const p of CONFIG.presets) {
-      const item = document.createElement('div');
+      const item = document.createElement(itemTag);
       item.className = itemClass;
       item.dataset.rate = String(p);
       item.textContent = formatRate(p);
@@ -507,13 +507,15 @@
     }
 
     applyRate(rate) {
-      RateWriter.applyAll(rate);
+      const video =
+        document.querySelector('video.html5-main-video') || document.querySelector('video');
+      if (video) video.playbackRate = rate;
       if (this._labelEl) this._labelEl.textContent = formatRate(rate);
     }
   }
 
   // ─────────────────────────────────────────────────────────────
-  // Bilibili adapter — hide native 倍速, insert our control in-place
+  // Bilibili adapter — replace only the existing native speed menu
   // ─────────────────────────────────────────────────────────────
   class BilibiliAdapter {
     constructor(controller) {
@@ -523,23 +525,39 @@
     }
 
     start() {
-      this._injectCss();
-      const tryMount = () => {
-        if (shouldSkipPage('bilibili')) return false;
-        return this._ensureControl();
-      };
-      const waitForControls = () => {
-        if (!tryMount()) setTimeout(waitForControls, 300);
-      };
-      waitForControls();
-      // SPA href changes
-      let href = location.href;
-      setInterval(() => {
-        if (location.href !== href) {
-          href = location.href;
-          tryMount();
+      const mount = () => {
+        const menu =
+          document.querySelector('ul.bpx-player-ctrl-playbackrate-menu') ||
+          document.querySelector('.bpx-player-ctrl-playbackrate-menu');
+        const video = document.querySelector('video') || document.querySelector('bwp-video');
+        if (!menu || !video) return false;
+
+        const rebuild = () => {
+          fillMenu(menu, this.controller, {
+            siteId: 'bilibili',
+            itemClass: 'bpx-player-ctrl-playbackrate-menu-item',
+            activeClass: 'bpx-player-ctrl-playbackrate-menu-item-active',
+            customClass: 'bpx-player-ctrl-playbackrate-menu-item',
+            inputClass: 'speedup-bili-input',
+            itemTag: 'li',
+          });
+        };
+        rebuild();
+        this._rebuild = rebuild;
+
+        if (!video.dataset.speedupPlayingListener) {
+          video.dataset.speedupPlayingListener = '1';
+          video.addEventListener('playing', () => this.applyRate(this.controller.getEffectiveRate()));
         }
-      }, 800);
+        this.applyRate(this.controller.getEffectiveRate());
+        return true;
+      };
+
+      const waitForMenu = () => {
+        if (!mount()) setTimeout(waitForMenu, 300);
+      };
+      waitForMenu();
+      window.addEventListener('hashchange', () => setTimeout(waitForMenu, 300));
     }
 
     _injectCss() {
@@ -679,8 +697,10 @@
     }
 
     applyRate(rate) {
-      RateWriter.applyAll(rate);
-      if (this._labelEl) this._labelEl.textContent = formatRate(rate);
+      const video = document.querySelector('video') || document.querySelector('bwp-video');
+      if (video && 'playbackRate' in video) video.playbackRate = rate;
+      const result = document.querySelector('.bpx-player-ctrl-playbackrate-result');
+      if (result) result.textContent = formatRate(rate);
     }
   }
 
@@ -710,7 +730,7 @@
       adapter.start();
       adapter.applyRate(controller.getEffectiveRate());
       console.info(
-        `[SpeedUp] v1.4.0 active on ${siteId} — base ${formatRate(controller.getBaseRate())}. Hold O/P 0.5s to temp slow/boost.`
+        `[SpeedUp] v1.4.1 active on ${siteId} — base ${formatRate(controller.getBaseRate())}. Hold O/P 0.5s to temp slow/boost.`
       );
     };
 
