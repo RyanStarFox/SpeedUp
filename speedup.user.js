@@ -286,7 +286,7 @@
 
       const onKeyDown = (e) => {
         if (e.repeat) {
-          if (['Semicolon', 'Quote', 'KeyO', 'KeyP'].includes(e.code)) {
+          if (['Comma', 'Period', 'Semicolon', 'Quote'].includes(e.code)) {
             e.preventDefault();
             e.stopPropagation();
           }
@@ -299,7 +299,7 @@
 
         // Prefer physical key codes so layout / IME noise matters less
         const code = e.code;
-        const step = { Semicolon: -0.1, Quote: 0.1, KeyO: -0.5, KeyP: 0.5 }[code];
+        const step = { Comma: -0.1, Period: 0.1, Semicolon: -0.5, Quote: 0.5 }[code];
         if (step && isPlayerFocusedAndPlaying()) {
           e.preventDefault();
           e.stopPropagation();
@@ -319,8 +319,8 @@
           return;
         }
         let kind = null;
-        if (code === 'Period') kind = 'p';
-        if (code === 'Comma') kind = 'o';
+        if (code === 'KeyP') kind = 'p';
+        if (code === 'KeyO') kind = 'o';
         if (!kind) return;
         if (!isPlayerFocusedAndPlaying()) return;
         if (this._holdKey) return;
@@ -354,13 +354,13 @@
 
       const onKeyUp = (e) => {
         const code = e.code;
-        if (['Semicolon', 'Quote', 'KeyO', 'KeyP'].includes(code)) {
+        if (['Comma', 'Period', 'Semicolon', 'Quote'].includes(code)) {
           clearSpeedRepeat();
           return;
         }
         const isHoldKey =
-          code === 'Comma' ||
-          code === 'Period';
+          code === 'KeyO' ||
+          code === 'KeyP';
         if (isHoldKey && this._holdKey) clearHold('keyup');
       };
 
