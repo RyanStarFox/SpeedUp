@@ -26,8 +26,13 @@ assert.match(
 );
 assert.doesNotMatch(
   script,
-  /new MutationObserver/,
+  /observe\(document\.documentElement/,
   'must not observe the entire page and repeatedly remount controls'
+);
+assert.match(
+  script,
+  /new MutationObserver\(normalize\)\.observe\(label/,
+  'may observe only the Bilibili playback label for precision normalization'
 );
 
 console.log('userscript compatibility: ok');

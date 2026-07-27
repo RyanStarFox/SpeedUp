@@ -525,6 +525,7 @@
           this._menu = this._wrap.querySelector('.speedup-yt-menu');
         }
         this.applyRate(this.controller.getEffectiveRate());
+        this._normalizeRateLabel();
         return true;
       };
 
@@ -684,6 +685,31 @@
       };
       waitForMenu();
       window.addEventListener('hashchange', () => setTimeout(waitForMenu, 300));
+    }
+
+    _normalizeRateLabel() {
+      const label = document.querySelector('.bpx-player-ctrl-playbackrate-result');
+      if (!label) {
+        setTimeout(() => this._normalizeRateLabel(), 300);
+        return;
+      }
+
+      const normalize = () => {
+        const rate = Number.parseFloat(label.textContent);
+        if (!Number.isFinite(rate)) return;
+        const formatted = formatControlRate(rate);
+        if (label.textContent !== formatted) label.textContent = formatted;
+      };
+      normalize();
+
+      if (!label.dataset.speedupRateLabelObserver) {
+        label.dataset.speedupRateLabelObserver = '1';
+        new MutationObserver(normalize).observe(label, {
+          childList: true,
+          characterData: true,
+          subtree: true,
+        });
+      }
     }
 
     _injectCss() {
