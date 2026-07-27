@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SpeedUp — Bilibili & YouTube
 // @namespace    https://github.com/RyanStarFox/SpeedUp
-// @version      1.5.0
+// @version      1.6.0
 // @description  Richer playback speeds with native-bar UX, memory, and hold O/P
 // @author       SpeedUp
 // @match        https://www.youtube.com/*

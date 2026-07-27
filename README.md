@@ -2,6 +2,8 @@
 
 油猴脚本：为 **Bilibili** 与 **YouTube** 提供更丰富的播放倍速（预设 + 自定义），记忆倍率，并支持长按 O / P 临时变速。
 
+当前版本：**1.6.0**。每次影响用户行为的发布都会更新油猴元数据中的 `@version`。
+
 ## 安装
 
 1. Safari 可使用 [Userscripts](https://github.com/quoid/userscripts) 或 [Tampermonkey](https://www.tampermonkey.net/)；Chrome/Edge/Firefox 可使用 Tampermonkey
