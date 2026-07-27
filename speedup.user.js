@@ -269,6 +269,12 @@
         return Boolean(video && !video.paused && !video.ended);
       };
       const isTextEditing = (event) => {
+        let deepActive = document.activeElement;
+        while (deepActive?.shadowRoot?.activeElement) {
+          deepActive = deepActive.shadowRoot.activeElement;
+        }
+        if (this._isEditableTarget(deepActive)) return true;
+
         const composedPath = event.composedPath?.() || [];
         if (
           composedPath.some((node) => {
