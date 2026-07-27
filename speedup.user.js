@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SpeedUp — Bilibili & YouTube
 // @namespace    https://github.com/RyanStarFox/SpeedUp
-// @version      1.6.2
+// @version      1.6.3
 // @description  Richer playback speeds with native-bar UX, memory, and hold O/P
 // @author       SpeedUp
 // @match        https://www.youtube.com/*
@@ -650,6 +650,18 @@
     }
 
     start() {
+      if (!this._rateEventBound) {
+        this._rateEventBound = true;
+        const normalizeAfterMediaEvent = (event) => {
+          if (event.target?.tagName !== 'VIDEO') return;
+          [0, 50, 200, 500, 1000, 2000].forEach((delay) => {
+            setTimeout(() => this._normalizeRateLabel(), delay);
+          });
+        };
+        document.addEventListener('playing', normalizeAfterMediaEvent, true);
+        document.addEventListener('pause', normalizeAfterMediaEvent, true);
+      }
+
       const mount = () => {
         const menu =
           document.querySelector('ul.bpx-player-ctrl-playbackrate-menu') ||
@@ -676,9 +688,6 @@
           video.dataset.speedupPlayingListener = '1';
           video.addEventListener('playing', () => {
             this.applyRate(this.controller.getEffectiveRate());
-            [0, 50, 200, 500, 1000].forEach((delay) => {
-              setTimeout(() => this._normalizeRateLabel(), delay);
-            });
           });
         }
         this.applyRate(this.controller.getEffectiveRate());
