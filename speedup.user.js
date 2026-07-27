@@ -32,7 +32,7 @@
 
     presets: [0.5, 1, 1.5, 2, 2.5, 3],
     min: 0.1,
-    max: 8.0,
+    max: 10.0,
     holdDelayMs: 500,
     holdBoost: 1.5, // long-press P
     holdSlow: 0.5, // long-press O
