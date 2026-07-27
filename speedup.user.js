@@ -189,6 +189,9 @@
       this.holdMultiplier = 1;
       this._holdKey = null;
       this._holdTimer = null;
+      this._speedKey = null;
+      this._speedHoldTimer = null;
+      this._speedRepeatTimer = null;
       this._listeners = new Set();
     }
 
@@ -271,9 +274,22 @@
         const active = document.activeElement;
         return Boolean(active?.matches('video') || active?.closest?.(playerSelector));
       };
+      const clearSpeedRepeat = () => {
+        if (this._speedHoldTimer) clearTimeout(this._speedHoldTimer);
+        if (this._speedRepeatTimer) clearTimeout(this._speedRepeatTimer);
+        this._speedHoldTimer = null;
+        this._speedRepeatTimer = null;
+        this._speedKey = null;
+      };
 
       const onKeyDown = (e) => {
-        if (e.repeat) return;
+        if (e.repeat) {
+          if (e.code === 'Digit9' || e.code === 'Digit0' || e.code === 'Minus' || e.code === 'Equal') {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+          return;
+        }
         if (e.ctrlKey || e.metaKey || e.altKey) return;
         if (this._isEditableTarget(e.target) || this._isEditableTarget(document.activeElement)) {
           return;
@@ -283,7 +299,21 @@
         const code = e.code;
         const step = { Digit9: -0.5, Digit0: 0.5, Minus: -0.1, Equal: 0.1 }[code];
         if (step && isPlayerFocused()) {
+          e.preventDefault();
+          e.stopPropagation();
           this.setBaseRate(roundRate(this.baseRate + step));
+          if (this._speedKey) return;
+          this._speedKey = code;
+          const repeatStep = code === 'Digit9' || code === 'Digit0' ? step : step;
+          const repeatEvery = code === 'Digit9' || code === 'Digit0' ? 200 : 100;
+          this._speedHoldTimer = setTimeout(() => {
+            const tick = () => {
+              if (!this._speedKey) return;
+              this.setBaseRate(roundRate(this.baseRate + repeatStep));
+              this._speedRepeatTimer = setTimeout(tick, repeatEvery);
+            };
+            tick();
+          }, 500);
           return;
         }
         let kind = null;
@@ -321,6 +351,10 @@
 
       const onKeyUp = (e) => {
         const code = e.code;
+        if (code === 'Digit9' || code === 'Digit0' || code === 'Minus' || code === 'Equal') {
+          clearSpeedRepeat();
+          return;
+        }
         const isHoldKey =
           code === 'KeyP' ||
           code === 'KeyO' ||
@@ -335,10 +369,12 @@
       document.addEventListener('keyup', onKeyUp, true);
       win.addEventListener('blur', () => {
         clearHold('blur');
+        clearSpeedRepeat();
       });
       document.addEventListener('visibilitychange', () => {
         if (document.hidden) {
           clearHold('hidden');
+          clearSpeedRepeat();
         }
       });
     }
@@ -463,10 +499,10 @@
         style.id = 'speedup-yt-style';
         style.textContent = `
           .speedup-yt-wrap { position: relative; display: inline-block; vertical-align: top; }
-          .speedup-yt-btn { min-width: 48px !important; }
+          .speedup-yt-btn { min-width: 48px !important; position: relative !important; }
           .speedup-yt-label {
             font-size: 14px; font-weight: 500; display: flex; align-items: center;
-            justify-content: center; height: 100%; min-width: 40px; color: #fff; line-height: 1;
+            justify-content: center; position: absolute; inset: 0; color: #fff; line-height: 1;
           }
           .speedup-yt-menu {
             position: absolute; bottom: 52px; right: 0; background: rgba(28,28,28,.95);
@@ -480,10 +516,11 @@
           }
           .speedup-yt-item:hover { background: rgba(255,255,255,.1); }
           .speedup-yt-item.speedup-active { background: rgba(255,255,255,.16); }
-          .speedup-yt-custom { padding: 4px 12px; text-align: center; line-height: 20px; }
+          .speedup-yt-custom { padding: 4px 12px; text-align: center; line-height: 20px; font-size: 16px; }
           .speedup-yt-input {
             width: 100%; height: 28px; box-sizing: border-box; background: transparent; border: 0;
-            color: #fff; border-radius: 0; padding: 4px 6px; font-size: 16px; text-align: center;
+            color: #fff; border-radius: 0; padding: 4px 6px; font-size: 16px !important; text-align: center;
+            line-height: 20px; -webkit-appearance: none;
           }
         `;
         (document.head || document.documentElement).appendChild(style);
