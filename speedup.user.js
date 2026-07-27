@@ -76,9 +76,9 @@
     return clampRate(n);
   }
 
-  function formatRate(rate) {
+  function formatRate(rate, suffix = 'x') {
     const r = roundRate(rate);
-    return (Number.isInteger(r) ? r.toFixed(1) : String(r)) + 'x';
+    return (Number.isInteger(r) ? r.toFixed(1) : String(r)) + suffix;
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -189,9 +189,6 @@
       this.holdMultiplier = 1;
       this._holdKey = null;
       this._holdTimer = null;
-      this._adjustDirection = 0;
-      this._adjustDelayTimer = null;
-      this._adjustRepeatTimer = null;
       this._listeners = new Set();
     }
 
@@ -257,29 +254,22 @@
     }
 
     bindKeys() {
-      const clearPermanentAdjust = () => {
-        if (this._adjustDelayTimer) clearTimeout(this._adjustDelayTimer);
-        if (this._adjustRepeatTimer) clearTimeout(this._adjustRepeatTimer);
-        this._adjustDelayTimer = null;
-        this._adjustRepeatTimer = null;
-        this._adjustDirection = 0;
-      };
-
-      const beginPermanentAdjust = (direction) => {
-        if (this._adjustDirection || this._holdKey) return;
-        this._adjustDirection = direction;
-        this._adjustDelayTimer = setTimeout(() => {
-          this._adjustDelayTimer = null;
-          let tickCount = 0;
-          const tick = () => {
-            if (!this._adjustDirection) return;
-            tickCount += 1;
-            const step = tickCount === 1 ? 0.2 : tickCount === 2 ? 0.3 : 0.5;
-            this.setBaseRate(roundRate(this.baseRate + this._adjustDirection * step));
-            this._adjustRepeatTimer = setTimeout(tick, 200);
-          };
-          this._adjustRepeatTimer = setTimeout(tick, 200);
-        }, CONFIG.holdDelayMs);
+      const playerSelector = '#movie_player, .bpx-player, .bilibili-player';
+      document.addEventListener(
+        'pointerdown',
+        (event) => {
+          const player = event.target.closest?.(playerSelector);
+          const video = event.target.matches?.('video') ? event.target : player?.querySelector('video');
+          if (video) {
+            video.tabIndex = 0;
+            video.focus({ preventScroll: true });
+          }
+        },
+        true
+      );
+      const isPlayerFocused = () => {
+        const active = document.activeElement;
+        return Boolean(active?.matches('video') || active?.closest?.(playerSelector));
       };
 
       const onKeyDown = (e) => {
@@ -291,15 +281,16 @@
 
         // Prefer physical key codes so layout / IME noise matters less
         const code = e.code;
-        if (code === 'Minus' || code === 'Equal') {
-          beginPermanentAdjust(code === 'Equal' ? 1 : -1);
+        const step = { Digit9: -0.5, Digit0: 0.5, Minus: -0.1, Equal: 0.1 }[code];
+        if (step && isPlayerFocused()) {
+          this.setBaseRate(roundRate(this.baseRate + step));
           return;
         }
         let kind = null;
         if (code === 'KeyP' || e.key === 'p' || e.key === 'P') kind = 'p';
         if (code === 'KeyO' || e.key === 'o' || e.key === 'O') kind = 'o';
         if (!kind) return;
-        if (this._holdKey || this._adjustDirection) return;
+        if (this._holdKey) return;
 
         this._holdKey = kind;
         const multiplier = kind === 'p' ? CONFIG.holdBoost : CONFIG.holdSlow;
@@ -330,10 +321,6 @@
 
       const onKeyUp = (e) => {
         const code = e.code;
-        if (code === 'Minus' || code === 'Equal') {
-          clearPermanentAdjust();
-          return;
-        }
         const isHoldKey =
           code === 'KeyP' ||
           code === 'KeyO' ||
@@ -348,12 +335,10 @@
       document.addEventListener('keyup', onKeyUp, true);
       win.addEventListener('blur', () => {
         clearHold('blur');
-        clearPermanentAdjust();
       });
       document.addEventListener('visibilitychange', () => {
         if (document.hidden) {
           clearHold('hidden');
-          clearPermanentAdjust();
         }
       });
     }
@@ -371,7 +356,7 @@
       const item = document.createElement(itemTag);
       item.className = itemClass;
       item.dataset.rate = String(p);
-      item.textContent = formatRate(p);
+      item.textContent = formatRate(p, opts.suffix);
       if (Math.abs(controller.getBaseRate() - p) < 0.05) {
         item.classList.add(activeClass);
       }
@@ -480,8 +465,8 @@
           .speedup-yt-wrap { position: relative; display: inline-block; vertical-align: top; }
           .speedup-yt-btn { min-width: 48px !important; }
           .speedup-yt-label {
-            font-size: 13px; font-weight: 500; display: flex; align-items: center;
-            justify-content: center; height: 100%; min-width: 40px; color: #fff;
+            font-size: 14px; font-weight: 500; display: flex; align-items: center;
+            justify-content: center; height: 100%; min-width: 40px; color: #fff; line-height: 1;
           }
           .speedup-yt-menu {
             position: absolute; bottom: 52px; right: 0; background: rgba(28,28,28,.95);
@@ -491,14 +476,14 @@
           }
           .speedup-yt-menu[hidden] { display: none !important; }
           .speedup-yt-item {
-            padding: 9px 16px; color: #fff; cursor: pointer; font-size: 16px; text-align: center;
+            padding: 4px 16px; color: #fff; cursor: pointer; font-size: 16px; text-align: center; line-height: 20px;
           }
           .speedup-yt-item:hover { background: rgba(255,255,255,.1); }
           .speedup-yt-item.speedup-active { background: rgba(255,255,255,.16); }
-          .speedup-yt-custom { padding: 6px 12px; }
+          .speedup-yt-custom { padding: 4px 12px; text-align: center; line-height: 20px; }
           .speedup-yt-input {
-            width: 100%; box-sizing: border-box; background: #111; border: 1px solid #555;
-            color: #fff; border-radius: 4px; padding: 4px 6px; font-size: 12px;
+            width: 100%; height: 28px; box-sizing: border-box; background: transparent; border: 0;
+            color: #fff; border-radius: 0; padding: 4px 6px; font-size: 16px; text-align: center;
           }
         `;
         (document.head || document.documentElement).appendChild(style);
@@ -515,7 +500,7 @@
 
       const label = document.createElement('div');
       label.className = 'speedup-yt-label';
-      label.textContent = formatRate(this.controller.getEffectiveRate());
+      label.textContent = formatRate(this.controller.getEffectiveRate(), '');
       btn.appendChild(label);
 
       const menu = document.createElement('div');
@@ -531,6 +516,7 @@
           inputClass: 'speedup-yt-input',
           reverse: true,
           customFirst: true,
+          suffix: '',
         });
       };
       rebuild();
@@ -566,7 +552,7 @@
       const video =
         document.querySelector('video.html5-main-video') || document.querySelector('video');
       if (video) video.playbackRate = rate;
-      if (this._labelEl) this._labelEl.textContent = formatRate(rate);
+      if (this._labelEl) this._labelEl.textContent = formatRate(rate, '');
     }
   }
 
