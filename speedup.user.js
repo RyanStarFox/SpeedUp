@@ -269,6 +269,23 @@
         return Boolean(video && !video.paused && !video.ended);
       };
       const isTextEditing = (event) => {
+        const composedPath = event.composedPath?.() || [];
+        if (
+          composedPath.some((node) => {
+            if (!node || node.nodeType !== Node.ELEMENT_NODE) return false;
+            const tag = node.tagName?.toLowerCase();
+            return (
+              tag === 'input' ||
+              tag === 'textarea' ||
+              tag === 'select' ||
+              node.isContentEditable ||
+              tag === 'bili-comment-textarea' ||
+              tag === 'bili-comment-box'
+            );
+          })
+        ) {
+          return true;
+        }
         if (
           this._isEditableTarget(event.target) ||
           this._isEditableTarget(document.activeElement)
