@@ -291,8 +291,8 @@
 
         // Prefer physical key codes so layout / IME noise matters less
         const code = e.code;
-        if (code === 'BracketLeft' || code === 'BracketRight') {
-          beginPermanentAdjust(code === 'BracketRight' ? 1 : -1);
+        if (code === 'Minus' || code === 'Equal') {
+          beginPermanentAdjust(code === 'Equal' ? 1 : -1);
           return;
         }
         let kind = null;
@@ -330,7 +330,7 @@
 
       const onKeyUp = (e) => {
         const code = e.code;
-        if (code === 'BracketLeft' || code === 'BracketRight') {
+        if (code === 'Minus' || code === 'Equal') {
           clearPermanentAdjust();
           return;
         }
