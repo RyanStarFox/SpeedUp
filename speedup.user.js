@@ -270,15 +270,15 @@
         this._adjustDirection = direction;
         this._adjustDelayTimer = setTimeout(() => {
           this._adjustDelayTimer = null;
-          const startedAt = Date.now();
+          let tickCount = 0;
           const tick = () => {
             if (!this._adjustDirection) return;
-            const earlyPhase = Date.now() - startedAt < 2000;
-            const step = earlyPhase ? 0.1 : 0.5;
+            tickCount += 1;
+            const step = tickCount === 1 ? 0.2 : tickCount === 2 ? 0.3 : 0.5;
             this.setBaseRate(roundRate(this.baseRate + this._adjustDirection * step));
-            this._adjustRepeatTimer = setTimeout(tick, earlyPhase ? 400 : 200);
+            this._adjustRepeatTimer = setTimeout(tick, 200);
           };
-          tick();
+          this._adjustRepeatTimer = setTimeout(tick, 200);
         }, CONFIG.holdDelayMs);
       };
 
