@@ -19,6 +19,11 @@ assert.match(
   /_replaceNativeSpeedPanel/,
   'must target YouTube’s native settings panel'
 );
+assert.match(
+  script,
+  /customFirst: true/,
+  'must render Bilibili’s custom item at the top of an upward-opening menu'
+);
 assert.doesNotMatch(
   script,
   /new MutationObserver/,

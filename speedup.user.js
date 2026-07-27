@@ -324,7 +324,8 @@
     const { itemClass, activeClass, customClass, inputClass, itemTag = 'div', siteId } = opts;
     menuEl.textContent = '';
 
-    for (const p of CONFIG.presets) {
+    const rates = opts.reverse ? [...CONFIG.presets].reverse() : CONFIG.presets;
+    for (const p of rates) {
       const item = document.createElement(itemTag);
       item.className = itemClass;
       item.dataset.rate = String(p);
@@ -351,6 +352,15 @@
     input.step = '0.1';
     input.placeholder = `${CONFIG.min}-${CONFIG.max}`;
     input.value = Storage.getCustom(siteId) || '';
+    Object.assign(input.style, {
+      background: 'transparent',
+      color: 'inherit',
+      border: '0',
+      outline: '0',
+      width: '100%',
+      textAlign: 'center',
+      font: 'inherit',
+    });
 
     const apply = () => {
       const parsed = parseCustomRate(input.value);
@@ -377,7 +387,8 @@
     input.addEventListener('blur', apply);
 
     row.appendChild(input);
-    menuEl.appendChild(row);
+    if (opts.customFirst) menuEl.insertBefore(row, menuEl.firstChild);
+    else menuEl.appendChild(row);
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -519,19 +530,20 @@
         (event) => {
           const row = event.target.closest?.('.ytp-panel-menu .ytp-menuitem');
           if (!isSpeedRow(row)) return;
-          // YouTube swaps the panel asynchronously after this native click.
-          [80, 220].forEach((delay) => setTimeout(() => this._replaceNativeSpeedPanel(), delay));
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          this._replaceNativeSpeedPanel(true);
         },
         true
       );
       document.addEventListener('yt-navigate-finish', () => this.applyRate(this.controller.getEffectiveRate()));
     }
 
-    _replaceNativeSpeedPanel() {
+    _replaceNativeSpeedPanel(force = false) {
       const menu = document.querySelector('.ytp-panel-menu');
       if (!menu) return;
       const rows = [...menu.querySelectorAll(':scope > .ytp-menuitem')];
-      if (!rows.length || rows.some((row) => /播放速度|Playback speed/i.test(row.innerText))) return;
+      if (!rows.length || (!force && rows.some((row) => /播放速度|Playback speed/i.test(row.innerText)))) return;
 
       fillMenu(menu, this.controller, {
         siteId: 'youtube',
@@ -576,6 +588,8 @@
             customClass: 'bpx-player-ctrl-playbackrate-menu-item',
             inputClass: 'speedup-bili-input',
             itemTag: 'li',
+            reverse: true,
+            customFirst: true,
           });
         };
         rebuild();
