@@ -285,6 +285,8 @@
               '.reply-box:focus-within',
               '.ql-editor:focus-within',
               '.bpx-player-dm-input:focus-within',
+              'bili-comment-textarea:focus-within',
+              'bili-comment-box:focus-within',
               'iframe:focus',
             ].join(', ')
           )
