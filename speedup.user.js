@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SpeedUp — Bilibili & YouTube
 // @namespace    https://github.com/RyanStarFox/SpeedUp
-// @version      1.6.0
+// @version      1.6.1
 // @description  Richer playback speeds with native-bar UX, memory, and hold O/P
 // @author       SpeedUp
 // @match        https://www.youtube.com/*
@@ -702,9 +702,11 @@
       };
       normalize();
 
-      if (!label.dataset.speedupRateLabelObserver) {
-        label.dataset.speedupRateLabelObserver = '1';
-        new MutationObserver(normalize).observe(label, {
+      const control =
+        label.closest('.bpx-player-ctrl-playbackrate') || label.parentElement;
+      if (control && !control.dataset.speedupRateControlObserver) {
+        control.dataset.speedupRateControlObserver = '1';
+        new MutationObserver(() => this._normalizeRateLabel()).observe(control, {
           childList: true,
           characterData: true,
           subtree: true,

@@ -31,8 +31,8 @@ assert.doesNotMatch(
 );
 assert.match(
   script,
-  /new MutationObserver\(normalize\)\.observe\(label/,
-  'may observe only the Bilibili playback label for precision normalization'
+  /new MutationObserver\(\(\) => this\._normalizeRateLabel\(\)\)\.observe\(control/,
+  'may observe only the Bilibili rate control for precision normalization'
 );
 
 console.log('userscript compatibility: ok');
