@@ -284,7 +284,7 @@
 
       const onKeyDown = (e) => {
         if (e.repeat) {
-          if (e.code === 'Digit9' || e.code === 'Digit0' || e.code === 'Minus' || e.code === 'Equal') {
+          if (['KeyU', 'KeyI', 'KeyO', 'KeyP'].includes(e.code)) {
             e.preventDefault();
             e.stopPropagation();
           }
@@ -297,15 +297,15 @@
 
         // Prefer physical key codes so layout / IME noise matters less
         const code = e.code;
-        const step = { Digit9: -0.5, Digit0: 0.5, Minus: -0.1, Equal: 0.1 }[code];
+        const step = { KeyU: -0.1, KeyI: 0.1, KeyO: -0.5, KeyP: 0.5 }[code];
         if (step && isPlayerFocused()) {
           e.preventDefault();
           e.stopPropagation();
           this.setBaseRate(roundRate(this.baseRate + step));
           if (this._speedKey) return;
           this._speedKey = code;
-          const repeatStep = code === 'Digit9' || code === 'Digit0' ? step : step;
-          const repeatEvery = code === 'Digit9' || code === 'Digit0' ? 200 : 100;
+          const repeatStep = step;
+          const repeatEvery = code === 'KeyO' || code === 'KeyP' ? 200 : 100;
           this._speedHoldTimer = setTimeout(() => {
             const tick = () => {
               if (!this._speedKey) return;
@@ -317,9 +317,10 @@
           return;
         }
         let kind = null;
-        if (code === 'KeyP' || e.key === 'p' || e.key === 'P') kind = 'p';
-        if (code === 'KeyO' || e.key === 'o' || e.key === 'O') kind = 'o';
+        if (code === 'Equal') kind = 'p';
+        if (code === 'Minus') kind = 'o';
         if (!kind) return;
+        if (!isPlayerFocused()) return;
         if (this._holdKey) return;
 
         this._holdKey = kind;
@@ -351,17 +352,13 @@
 
       const onKeyUp = (e) => {
         const code = e.code;
-        if (code === 'Digit9' || code === 'Digit0' || code === 'Minus' || code === 'Equal') {
+        if (['KeyU', 'KeyI', 'KeyO', 'KeyP'].includes(code)) {
           clearSpeedRepeat();
           return;
         }
         const isHoldKey =
-          code === 'KeyP' ||
-          code === 'KeyO' ||
-          e.key === 'p' ||
-          e.key === 'P' ||
-          e.key === 'o' ||
-          e.key === 'O';
+          code === 'Minus' ||
+          code === 'Equal';
         if (isHoldKey && this._holdKey) clearHold('keyup');
       };
 
