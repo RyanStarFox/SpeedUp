@@ -189,6 +189,9 @@
       this.holdMultiplier = 1;
       this._holdKey = null;
       this._holdTimer = null;
+      this._adjustDirection = 0;
+      this._adjustDelayTimer = null;
+      this._adjustRepeatTimer = null;
       this._listeners = new Set();
     }
 
@@ -254,6 +257,31 @@
     }
 
     bindKeys() {
+      const clearPermanentAdjust = () => {
+        if (this._adjustDelayTimer) clearTimeout(this._adjustDelayTimer);
+        if (this._adjustRepeatTimer) clearTimeout(this._adjustRepeatTimer);
+        this._adjustDelayTimer = null;
+        this._adjustRepeatTimer = null;
+        this._adjustDirection = 0;
+      };
+
+      const beginPermanentAdjust = (direction) => {
+        if (this._adjustDirection || this._holdKey) return;
+        this._adjustDirection = direction;
+        this._adjustDelayTimer = setTimeout(() => {
+          this._adjustDelayTimer = null;
+          const startedAt = Date.now();
+          const tick = () => {
+            if (!this._adjustDirection) return;
+            const earlyPhase = Date.now() - startedAt < 2000;
+            const step = earlyPhase ? 0.1 : 0.5;
+            this.setBaseRate(roundRate(this.baseRate + this._adjustDirection * step));
+            this._adjustRepeatTimer = setTimeout(tick, earlyPhase ? 400 : 200);
+          };
+          tick();
+        }, CONFIG.holdDelayMs);
+      };
+
       const onKeyDown = (e) => {
         if (e.repeat) return;
         if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -263,11 +291,15 @@
 
         // Prefer physical key codes so layout / IME noise matters less
         const code = e.code;
+        if (code === 'BracketLeft' || code === 'BracketRight') {
+          beginPermanentAdjust(code === 'BracketRight' ? 1 : -1);
+          return;
+        }
         let kind = null;
         if (code === 'KeyP' || e.key === 'p' || e.key === 'P') kind = 'p';
         if (code === 'KeyO' || e.key === 'o' || e.key === 'O') kind = 'o';
         if (!kind) return;
-        if (this._holdKey) return;
+        if (this._holdKey || this._adjustDirection) return;
 
         this._holdKey = kind;
         const multiplier = kind === 'p' ? CONFIG.holdBoost : CONFIG.holdSlow;
@@ -298,6 +330,10 @@
 
       const onKeyUp = (e) => {
         const code = e.code;
+        if (code === 'BracketLeft' || code === 'BracketRight') {
+          clearPermanentAdjust();
+          return;
+        }
         const isHoldKey =
           code === 'KeyP' ||
           code === 'KeyO' ||
@@ -310,9 +346,15 @@
 
       document.addEventListener('keydown', onKeyDown, true);
       document.addEventListener('keyup', onKeyUp, true);
-      win.addEventListener('blur', () => clearHold('blur'));
+      win.addEventListener('blur', () => {
+        clearHold('blur');
+        clearPermanentAdjust();
+      });
       document.addEventListener('visibilitychange', () => {
-        if (document.hidden) clearHold('hidden');
+        if (document.hidden) {
+          clearHold('hidden');
+          clearPermanentAdjust();
+        }
       });
     }
   }
