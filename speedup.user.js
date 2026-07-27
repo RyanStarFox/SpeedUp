@@ -81,6 +81,10 @@
     return (Number.isInteger(r) ? r.toFixed(1) : String(r)) + suffix;
   }
 
+  function formatControlRate(rate, suffix = 'x') {
+    return clampRate(roundRate(rate)).toFixed(2) + suffix;
+  }
+
   // ─────────────────────────────────────────────────────────────
   // Site detect
   // ─────────────────────────────────────────────────────────────
@@ -258,11 +262,13 @@
 
     bindKeys() {
       const playerSelector = '#movie_player, .bpx-player, .bilibili-player';
+      this._playerFocused = false;
       document.addEventListener(
         'pointerdown',
         (event) => {
           const player = event.target.closest?.(playerSelector);
           const video = event.target.matches?.('video') ? event.target : player?.querySelector('video');
+          this._playerFocused = Boolean(player || event.target.matches?.('video'));
           if (video) {
             video.tabIndex = 0;
             video.focus({ preventScroll: true });
@@ -272,9 +278,12 @@
       );
       const isPlayerFocusedAndPlaying = () => {
         const active = document.activeElement;
-        const player = active?.matches('video') ? null : active?.closest?.(playerSelector);
-        const video = active?.matches('video') ? active : player?.querySelector('video');
-        return Boolean(video && !video.paused && !video.ended);
+        const activePlayer = active?.matches('video') ? null : active?.closest?.(playerSelector);
+        const video =
+          active?.matches('video')
+            ? active
+            : activePlayer?.querySelector('video') || document.querySelector('video');
+        return Boolean(this._playerFocused && video && !video.paused && !video.ended);
       };
       const clearSpeedRepeat = () => {
         if (this._speedHoldTimer) clearTimeout(this._speedHoldTimer);
@@ -307,7 +316,7 @@
           if (this._speedKey) return;
           this._speedKey = code;
           const repeatStep = step;
-          const repeatEvery = code === 'KeyO' || code === 'KeyP' ? 200 : 100;
+          const repeatEvery = code === 'Semicolon' || code === 'Quote' ? 200 : 100;
           this._speedHoldTimer = setTimeout(() => {
             const tick = () => {
               if (!this._speedKey) return;
@@ -324,6 +333,8 @@
         if (!kind) return;
         if (!isPlayerFocusedAndPlaying()) return;
         if (this._holdKey) return;
+        e.preventDefault();
+        e.stopPropagation();
 
         this._holdKey = kind;
         const multiplier = kind === 'p' ? CONFIG.holdBoost : CONFIG.holdSlow;
@@ -413,7 +424,8 @@
     input.max = String(CONFIG.max);
     input.step = '0.1';
     input.placeholder = `${CONFIG.min}-${CONFIG.max}`;
-    input.value = Storage.getCustom(siteId) || '';
+    const savedCustom = parseCustomRate(Storage.getCustom(siteId));
+    input.value = savedCustom == null ? '' : savedCustom.toFixed(1);
     Object.assign(input.style, {
       background: 'transparent',
       color: 'inherit',
@@ -427,10 +439,10 @@
     const apply = () => {
       const parsed = parseCustomRate(input.value);
       if (parsed == null) {
-        input.value = Storage.getCustom(siteId) || '';
+        input.value = savedCustom == null ? '' : savedCustom.toFixed(1);
         return;
       }
-      input.value = String(parsed);
+      input.value = parsed.toFixed(1);
       controller.setCustomAndBase(parsed);
       fillMenu(menuEl, controller, opts);
     };
@@ -502,6 +514,7 @@
           .speedup-yt-label {
             font-size: 14px; font-weight: 500; display: flex; align-items: center;
             justify-content: center; position: absolute; inset: 0; color: #fff; line-height: 1;
+            transform: translateY(-2px);
           }
           .speedup-yt-menu {
             position: absolute; bottom: 52px; right: 0; background: rgba(28,28,28,.95);
@@ -536,7 +549,7 @@
 
       const label = document.createElement('div');
       label.className = 'speedup-yt-label';
-      label.textContent = formatRate(this.controller.getEffectiveRate(), '');
+      label.textContent = formatControlRate(this.controller.getEffectiveRate(), '');
       btn.appendChild(label);
 
       const menu = document.createElement('div');
@@ -588,7 +601,7 @@
       const video =
         document.querySelector('video.html5-main-video') || document.querySelector('video');
       if (video) video.playbackRate = rate;
-      if (this._labelEl) this._labelEl.textContent = formatRate(rate, '');
+      if (this._labelEl) this._labelEl.textContent = formatControlRate(rate, '');
     }
   }
 
@@ -780,7 +793,7 @@
       const video = document.querySelector('video') || document.querySelector('bwp-video');
       if (video && 'playbackRate' in video) video.playbackRate = rate;
       const result = document.querySelector('.bpx-player-ctrl-playbackrate-result');
-      if (result) result.textContent = formatRate(rate);
+      if (result) result.textContent = formatControlRate(rate);
     }
   }
 
