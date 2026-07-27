@@ -82,7 +82,7 @@
   }
 
   function formatControlRate(rate, suffix = 'x') {
-    return clampRate(roundRate(rate)).toFixed(2) + suffix;
+    return clampRate(roundRate(rate)).toFixed(1) + suffix;
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -406,8 +406,9 @@
     input.max = String(CONFIG.max);
     input.step = '0.1';
     input.placeholder = `${CONFIG.min}-${CONFIG.max}`;
-    const savedCustom = parseCustomRate(Storage.getCustom(siteId));
-    input.value = savedCustom == null ? '' : savedCustom.toFixed(1);
+    const currentRate = controller.getBaseRate();
+    const isPreset = CONFIG.presets.some((preset) => Math.abs(preset - currentRate) < 0.05);
+    input.value = isPreset ? '' : currentRate.toFixed(1);
     Object.assign(input.style, {
       background: 'transparent',
       color: 'inherit',
@@ -416,12 +417,13 @@
       width: '100%',
       textAlign: 'center',
       font: 'inherit',
+      textIndent: '4px',
     });
 
     const apply = () => {
       const parsed = parseCustomRate(input.value);
       if (parsed == null) {
-        input.value = savedCustom == null ? '' : savedCustom.toFixed(1);
+        input.value = isPreset ? '' : currentRate.toFixed(1);
         return;
       }
       input.value = parsed.toFixed(1);
@@ -495,8 +497,8 @@
           .speedup-yt-btn { min-width: 48px !important; position: relative !important; }
           .speedup-yt-label {
             font-size: 14px; font-weight: 500; display: flex; align-items: center;
-            justify-content: center; position: absolute; inset: 0; color: #fff; line-height: 1;
-            transform: translateY(-2px);
+            justify-content: center; position: absolute; inset: -6px 0 0 0 !important;
+            color: #fff; line-height: 1; transform: none !important;
           }
           .speedup-yt-menu {
             position: absolute; bottom: 52px; right: 0; background: rgba(28,28,28,.95);
