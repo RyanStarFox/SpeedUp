@@ -667,7 +667,7 @@
         style.textContent = `
           .speedup-yt-wrap {
             position: relative; display: inline-block; vertical-align: top;
-            top: -12.5px;
+            top: -12px;
           }
           .speedup-yt-btn { min-width: 48px !important; position: relative !important; }
           .speedup-yt-label {
