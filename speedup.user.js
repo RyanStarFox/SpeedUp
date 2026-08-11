@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SpeedUp — Bilibili & YouTube
 // @namespace    https://github.com/RyanStarFox/SpeedUp
-// @version      1.7.4
+// @version      1.8.0
 // @description  Richer playback speeds with native-bar UX, memory, and hold O/P
 // @author       SpeedUp
 // @match        https://www.youtube.com/*
@@ -37,6 +37,9 @@
     holdDelayMs: 500,
     holdBoost: 1.5, // long-press P
     holdSlow: 0.5, // long-press O
+    // YouTube only: playback rate while an ad is showing (independent of normal video rate).
+    // Some setups treat 1x skippable ads like ad-blocker behavior; tune this in CONFIG.
+    youtubeAdRate: 2.0,
     debug: false,
   };
 
@@ -520,6 +523,111 @@
       this._labelEl = null;
       this._menu = null;
       this._wrap = null;
+      this._inAd = false;
+      this._adWatchBound = false;
+    }
+
+    _isAdPlaying() {
+      const player = document.querySelector('#movie_player');
+      if (!player) return false;
+      if (player.classList.contains('ad-showing') || player.classList.contains('ad-interrupting')) {
+        return true;
+      }
+      return Boolean(
+        player.querySelector('.ytp-ad-player-overlay') ||
+          player.querySelector('.ytp-ad-module') ||
+          player.querySelector('.video-ads')
+      );
+    }
+
+    _targetPlaybackRate(userRate) {
+      if (this._isAdPlaying()) return clampRate(CONFIG.youtubeAdRate);
+      return userRate;
+    }
+
+    _applyToVideos(rate) {
+      const root = document.querySelector('#movie_player') || document;
+      for (const video of root.querySelectorAll('video')) {
+        try {
+          if (Math.abs(video.playbackRate - rate) > 0.05) {
+            video.playbackRate = rate;
+          }
+        } catch (_) {
+          /* ignore */
+        }
+      }
+    }
+
+    _syncPlaybackRate(userRate = this.controller.getEffectiveRate()) {
+      this._applyToVideos(this._targetPlaybackRate(userRate));
+    }
+
+    _normalizeRateLabel() {
+      if (this._labelEl) {
+        this._labelEl.textContent = formatControlRate(this.controller.getEffectiveRate(), '');
+      }
+    }
+
+    _schedulePostAdResync() {
+      [0, 100, 300, 800, 1500, 2500].forEach((delay) => {
+        setTimeout(() => this._syncPlaybackRate(), delay);
+      });
+    }
+
+    _watchAdTransitions() {
+      if (this._adWatchBound) return;
+      this._adWatchBound = true;
+
+      const onTransition = () => {
+        const inAd = this._isAdPlaying();
+        if (inAd !== this._inAd) {
+          this._inAd = inAd;
+          log('YouTube ad', inAd ? 'start' : 'end');
+          this._syncPlaybackRate();
+          if (!inAd) this._schedulePostAdResync();
+          return;
+        }
+        this._syncPlaybackRate();
+      };
+
+      const attachPlayerObserver = () => {
+        const player = document.querySelector('#movie_player');
+        if (!player || player.dataset.speedupAdWatch) return;
+        player.dataset.speedupAdWatch = '1';
+        new MutationObserver(onTransition).observe(player, {
+          attributes: true,
+          attributeFilter: ['class'],
+          childList: true,
+          subtree: true,
+        });
+        onTransition();
+      };
+
+      attachPlayerObserver();
+      document.addEventListener('yt-navigate-finish', () => {
+        setTimeout(attachPlayerObserver, 200);
+      });
+
+      document.addEventListener(
+        'playing',
+        (e) => {
+          if (e.target?.tagName !== 'VIDEO') return;
+          onTransition();
+        },
+        true
+      );
+
+      document.addEventListener(
+        'ratechange',
+        (e) => {
+          if (!(e.target instanceof HTMLMediaElement)) return;
+          const expected = this._targetPlaybackRate(this.controller.getEffectiveRate());
+          if (Math.abs(e.target.playbackRate - expected) > 0.05) {
+            e.target.playbackRate = expected;
+          }
+        },
+        true
+      );
     }
 
     start() {
@@ -546,6 +654,7 @@
         if (!tryMount()) setTimeout(waitForControls, 300);
       };
       document.addEventListener('yt-navigate-finish', () => setTimeout(tryMount, 200));
+      this._watchAdTransitions();
       waitForControls();
     }
 
@@ -648,10 +757,8 @@
     }
 
     applyRate(rate) {
-      const video =
-        document.querySelector('video.html5-main-video') || document.querySelector('video');
-      if (video) video.playbackRate = rate;
-      if (this._labelEl) this._labelEl.textContent = formatControlRate(rate, '');
+      this._syncPlaybackRate(rate);
+      this._normalizeRateLabel();
     }
   }
 
@@ -914,7 +1021,7 @@
       adapter.start();
       adapter.applyRate(controller.getEffectiveRate());
       console.info(
-        `[SpeedUp] v1.4.1 active on ${siteId} — base ${formatRate(controller.getBaseRate())}. Hold O/P 0.5s to temp slow/boost.`
+        `[SpeedUp] v1.8.0 active on ${siteId} — base ${formatRate(controller.getBaseRate())}. Hold O/P 0.5s to temp slow/boost.`
       );
     };
 

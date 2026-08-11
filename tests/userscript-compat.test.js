@@ -35,4 +35,15 @@ assert.match(
   'may observe only the Bilibili rate control for precision normalization'
 );
 
+assert.match(
+  script,
+  /youtubeAdRate:\s*2\.0/,
+  'must expose a separate YouTube ad playback rate in CONFIG'
+);
+assert.match(
+  script,
+  /ad-showing/,
+  'must detect YouTube ad playback and restore rate after ads'
+);
+
 console.log('userscript compatibility: ok');
