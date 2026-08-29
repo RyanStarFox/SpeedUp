@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SpeedUp — Bilibili & YouTube
 // @namespace    https://github.com/RyanStarFox/SpeedUp
-// @version      1.8.0
+// @version      1.8.1
 // @description  Richer playback speeds with native-bar UX, memory, and hold O/P
 // @author       SpeedUp
 // @match        https://www.youtube.com/*
@@ -545,7 +545,22 @@
       return userRate;
     }
 
+    _notifyYouTubePlayer(rate) {
+      const player = document.querySelector('#movie_player');
+      if (!player || typeof player.setPlaybackRate !== 'function') return;
+      try {
+        const current =
+          typeof player.getPlaybackRate === 'function' ? player.getPlaybackRate() : null;
+        if (current == null || Math.abs(current - rate) > 0.05) {
+          player.setPlaybackRate(rate);
+        }
+      } catch (_) {
+        /* ignore */
+      }
+    }
+
     _applyToVideos(rate) {
+      this._notifyYouTubePlayer(rate);
       const root = document.querySelector('#movie_player') || document;
       for (const video of root.querySelectorAll('video')) {
         try {
@@ -623,6 +638,7 @@
           if (!(e.target instanceof HTMLMediaElement)) return;
           const expected = this._targetPlaybackRate(this.controller.getEffectiveRate());
           if (Math.abs(e.target.playbackRate - expected) > 0.05) {
+            this._notifyYouTubePlayer(expected);
             e.target.playbackRate = expected;
           }
         },
@@ -1021,7 +1037,7 @@
       adapter.start();
       adapter.applyRate(controller.getEffectiveRate());
       console.info(
-        `[SpeedUp] v1.8.0 active on ${siteId} — base ${formatRate(controller.getBaseRate())}. Hold O/P 0.5s to temp slow/boost.`
+        `[SpeedUp] v1.8.1 active on ${siteId} — base ${formatRate(controller.getBaseRate())}. Hold O/P 0.5s to temp slow/boost.`
       );
     };
 

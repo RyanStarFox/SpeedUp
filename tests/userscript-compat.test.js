@@ -46,4 +46,10 @@ assert.match(
   'must detect YouTube ad playback and restore rate after ads'
 );
 
+assert.match(
+  script,
+  /setPlaybackRate\(rate\)/,
+  'must notify the YouTube player when changing playback rate for caption sync'
+);
+
 console.log('userscript compatibility: ok');
