@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SpeedUp — Bilibili & YouTube
 // @namespace    https://github.com/RyanStarFox/SpeedUp
-// @version      1.8.1
+// @version      1.8.2
 // @description  Richer playback speeds with native-bar UX, memory, and hold O/P
 // @author       SpeedUp
 // @match        https://www.youtube.com/*
@@ -525,6 +525,11 @@
       this._wrap = null;
       this._inAd = false;
       this._adWatchBound = false;
+      this._applyingRate = false;
+    }
+
+    _isVisible(el) {
+      return Boolean(el && (el.offsetWidth > 0 || el.offsetHeight > 0));
     }
 
     _isAdPlaying() {
@@ -533,11 +538,27 @@
       if (player.classList.contains('ad-showing') || player.classList.contains('ad-interrupting')) {
         return true;
       }
+      // .video-ads is a persistent container — only treat visible ad UI as an ad.
       return Boolean(
-        player.querySelector('.ytp-ad-player-overlay') ||
-          player.querySelector('.ytp-ad-module') ||
-          player.querySelector('.video-ads')
+        this._isVisible(player.querySelector('.ytp-ad-player-overlay')) ||
+          this._isVisible(player.querySelector('.ytp-ad-module')) ||
+          this._isVisible(player.querySelector('.ytp-ad-text')) ||
+          this._isVisible(player.querySelector('.ytp-ad-preview-text')) ||
+          this._isVisible(player.querySelector('.ytp-ad-skip-button'))
       );
+    }
+
+    _nearestYouTubeRate(rate) {
+      const player = document.querySelector('#movie_player');
+      if (player && typeof player.getAvailablePlaybackRates === 'function') {
+        const available = player.getAvailablePlaybackRates();
+        if (available?.length) {
+          return available.reduce((best, candidate) =>
+            Math.abs(candidate - rate) < Math.abs(best - rate) ? candidate : best
+          );
+        }
+      }
+      return clampRate(Math.min(2, Math.max(0.25, rate)));
     }
 
     _targetPlaybackRate(userRate) {
@@ -548,28 +569,39 @@
     _notifyYouTubePlayer(rate) {
       const player = document.querySelector('#movie_player');
       if (!player || typeof player.setPlaybackRate !== 'function') return;
+      const notifyRate = this._nearestYouTubeRate(rate);
       try {
         const current =
           typeof player.getPlaybackRate === 'function' ? player.getPlaybackRate() : null;
-        if (current == null || Math.abs(current - rate) > 0.05) {
-          player.setPlaybackRate(rate);
+        if (current == null || Math.abs(current - notifyRate) > 0.05) {
+          player.setPlaybackRate(notifyRate);
         }
       } catch (_) {
         /* ignore */
       }
     }
 
-    _applyToVideos(rate) {
-      this._notifyYouTubePlayer(rate);
+    _forceVideoRates(rate) {
       const root = document.querySelector('#movie_player') || document;
       for (const video of root.querySelectorAll('video')) {
         try {
-          if (Math.abs(video.playbackRate - rate) > 0.05) {
-            video.playbackRate = rate;
-          }
+          video.playbackRate = rate;
         } catch (_) {
           /* ignore */
         }
+      }
+    }
+
+    _applyToVideos(rate) {
+      if (this._applyingRate) return;
+      this._applyingRate = true;
+      try {
+        this._notifyYouTubePlayer(rate);
+        this._forceVideoRates(rate);
+        requestAnimationFrame(() => this._forceVideoRates(rate));
+        setTimeout(() => this._forceVideoRates(rate), 0);
+      } finally {
+        this._applyingRate = false;
       }
     }
 
@@ -584,8 +616,10 @@
     }
 
     _schedulePostAdResync() {
-      [0, 100, 300, 800, 1500, 2500].forEach((delay) => {
-        setTimeout(() => this._syncPlaybackRate(), delay);
+      [0, 50, 100, 200, 300, 500, 800, 1200, 1500, 2500, 4000].forEach((delay) => {
+        setTimeout(() => {
+          if (!this._isAdPlaying()) this._syncPlaybackRate();
+        }, delay);
       });
     }
 
@@ -635,10 +669,10 @@
       document.addEventListener(
         'ratechange',
         (e) => {
+          if (this._applyingRate) return;
           if (!(e.target instanceof HTMLMediaElement)) return;
           const expected = this._targetPlaybackRate(this.controller.getEffectiveRate());
           if (Math.abs(e.target.playbackRate - expected) > 0.05) {
-            this._notifyYouTubePlayer(expected);
             e.target.playbackRate = expected;
           }
         },
@@ -1037,7 +1071,7 @@
       adapter.start();
       adapter.applyRate(controller.getEffectiveRate());
       console.info(
-        `[SpeedUp] v1.8.1 active on ${siteId} — base ${formatRate(controller.getBaseRate())}. Hold O/P 0.5s to temp slow/boost.`
+        `[SpeedUp] v1.8.2 active on ${siteId} — base ${formatRate(controller.getBaseRate())}. Hold O/P 0.5s to temp slow/boost.`
       );
     };
 

@@ -48,8 +48,13 @@ assert.match(
 
 assert.match(
   script,
-  /setPlaybackRate\(rate\)/,
-  'must notify the YouTube player when changing playback rate for caption sync'
+  /getAvailablePlaybackRates/,
+  'must clamp YouTube player API rate separately from the actual video playback rate'
+);
+assert.doesNotMatch(
+  script,
+  /player\.querySelector\('\.video-ads'\)/,
+  'must not treat the persistent YouTube ad container as an active ad'
 );
 
 console.log('userscript compatibility: ok');
